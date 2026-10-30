@@ -1,11 +1,15 @@
-# Last used 7/2/26
-# Same exact purpose as confusion_matrix_v3a.py, but majority votes are used instead of individial votes
+# 10/30/2026
+# Same exact purpose as confusion_matrix.py (majority votes), the following detail the differences for 4.0:
+# 1.) PREDICTION = "pid" makes the same matrix for the PID instead of the users
+#     (pid >= 0.5 -> Track, otherwise Cascade). Run it once with "user" and once with "pid"
+# 2.) Cascade is first on both axes, the y-axis is "User Agreement" (or "PID") and the x-axis is "MC Truth Label"
+# 3.) Bigger text so it can be read on a slide, and the title is one line
 # ============================================================
 # Neutrino Confusion Matrix
 # ============================================================
 # This script reads a spreadsheet of IceCube neutrino events
 # and builds a confusion matrix based on the majority vote
-# for each of the 50 videos.
+# for each of the videos.
 #
 # Instead of counting every individual user vote, we classify
 # each video into a single prediction using the majority vote:
@@ -21,7 +25,7 @@
 #   false_negative: predicted Cascade, true answer was Track   (wrong)
 #   true_negative:  predicted Cascade, true answer was Cascade (correct)
 #
-# At the end, the four cells add up to (at most) 50 videos.
+# At the end, the four cells add up to the number of videos.
 # ============================================================
 # --- IMPORTS ---
 import pandas as pd              # lets us read and work with spreadsheets
@@ -29,25 +33,34 @@ import matplotlib.pyplot as plt  # lets us draw charts and figures
 import matplotlib.cm as cm       # gives us access to colourmaps (Blues, Reds, etc.)
 import matplotlib.colors as mcolors  # lets us map a number (0-1) to a colour
 import numpy as np               # lets us build arrays for the matrix
+
+# ---- SETTINGS ---- #
+PREDICTION = "user"     # <-- "user" for the majority vote, "pid" for the PID
+PID_THRESHOLD = 0.5     # <-- pid at or above this counts as the PID saying Track
+# ------------------ #
+
 # ============================================================
 # STEP 1: LOAD THE DATA
 # ============================================================
-# df = pd.read_csv("name-that-neutrino-classifications-you-decide-without-stacey-timecut-2-seconds-accuracycut-50-percent-reduced-agreementcut-50~60.csv")
-# df = pd.read_csv("name-that-neutrino-classifications-you-decide-timecut-6-seconds-accuracycut-50-percent-reduced-agreementcut-50~60-additional-features.csv")
-df = pd.read_csv("name-that-neutrino-classifications-you-decide-timecut-6-seconds-reduced-agreementcut-50~60.csv")
+df = pd.read_csv("4-0-level-4-classifications-timecut-6-seconds-reduced-additional-features-track-clumped.csv")
+# df = pd.read_csv("4-0-level-4-classifications.csv")
 
-titleName = "Matrix with only 6 second time cut and agreement cut"
+titleName = "NtN 4.0 Level 4, time cut (6 s), no agreement cut, clumped tracks"
 print(f"Loaded {len(df)} videos.")
 # ============================================================
 # STEP 2: COUNT VIDEOS INTO THE FOUR CELLS
 # ============================================================
 # We start all four cells at zero, then loop through every
-# video and give it a single majority-vote prediction.
+# video and give it a single prediction.
 #
 # The majority vote works like this:
 #   - More Track votes than Cascade votes   -> predicted Track
 #   - More Cascade votes than Track votes   -> predicted Cascade
 #   - Equal votes (a tie)                   -> skip this video
+#
+# The PID works like this:
+#   - pid at or above PID_THRESHOLD -> predicted Track
+#   - pid below PID_THRESHOLD       -> predicted Cascade
 #
 # We then compare that prediction to the true answer:
 #
@@ -69,10 +82,14 @@ for index, row in df.iterrows():
     track_votes   = row["track_count"]      # number of users who voted Track
     cascade_votes = row["cascade_count"]    # number of users who voted Cascade
     true_label    = row["interaction_type"] # the true Monte Carlo answer (1 or 2)
-    subject_id = row["subject_id"]
 
-    # Determine the majority-vote prediction for this video
-    if track_votes > cascade_votes:
+    # Determine the prediction for this video
+    if PREDICTION == "pid":
+        if row["pid"] >= PID_THRESHOLD:
+            predicted = "Track"
+        else:
+            predicted = "Cascade"
+    elif track_votes > cascade_votes:
         predicted = "Track"
     elif cascade_votes > track_votes:
         predicted = "Cascade"
@@ -92,75 +109,61 @@ for index, row in df.iterrows():
         # This video was truly a Cascade.
         if predicted == "Cascade":
             true_negative += 1    # predicted Cascade, was Cascade (correct)
-            # print(subject_id)
         else:
             false_positive += 1   # predicted Track, was Cascade (wrong)
 
 total = true_positive + false_positive + false_negative + true_negative
 
 # Print a summary to the console
-print(f"\nTotal videos counted: {total}  (ties skipped: {ties_skipped})")
+print(f"\nPrediction: {PREDICTION}")
+print(f"Total videos counted: {total}  (ties skipped: {ties_skipped})")
 print(f"true_positive  = {true_positive} (predicted Track,   was Track)")
 print(f"false_positive = {false_positive} (predicted Track,   was Cascade)")
 print(f"false_negative = {false_negative} (predicted Cascade, was Track)")
 print(f"true_negative  = {true_negative} (predicted Cascade, was Cascade)")
 
 # ============================================================
-# STEP 3: CALCULATE PERFORMANCE METRICS
+# STEP 3: CALCULATE ACCURACY
 # ============================================================
 # Accuracy: of all videos, what fraction were predicted correctly?
 accuracy = (true_positive + true_negative) / total
-
-# Precision: of all videos predicted Track, what fraction were truly Tracks?
-precision = true_positive / (true_positive + false_positive)
-
-# Recall: of all truly Track videos, what fraction were predicted Track?
-recall = true_positive / (true_positive + false_negative)
-
-# F1 Score: balances precision and recall into one number (0 = worst, 1 = best)
-f1 = 2 * precision * recall / (precision + recall)
-
-print(f"\nPerformance metrics:")
-print(f"  Accuracy:  {accuracy:.1%}")
-print(f"  Precision: {precision:.1%}")
-print(f"  Recall:    {recall:.1%}")
-print(f"  F1 Score:  {f1:.3f}")
+print(f"\n  Accuracy:  {true_positive + true_negative}/{total} = {accuracy:.1%}")
 
 # ============================================================
 # STEP 4: CALCULATE COLUMN PERCENTAGES AND FRACTIONS
 # ============================================================
-# Now the rows represent PREDICTED LABELS
+# The rows represent PREDICTED LABELS
 # and the columns represent TRUE LABELS (MC truth).
 #
 # Layout:
 #
-#                      True Track        True Cascade
-#   Predicted Track  [ true_positive,    false_positive ]
-#   Pred. Cascade    [ false_negative,   true_negative  ]
+#                      True Cascade      True Track
+#   Pred. Cascade    [ true_negative,    false_negative ]
+#   Pred. Track      [ false_positive,   true_positive  ]
 #
 # Percentages are normalised by TRUE LABEL (column totals),
-# meaning each column sums to 1.0:
+# meaning each column sums to 100%:
 #
-#   Column 0 denominator = total true Tracks
-#   Column 1 denominator = total true Cascades
+#   Column 0 denominator = total true Cascades
+#   Column 1 denominator = total true Tracks
 
-# Raw counts in the new orientation
+# Raw counts
 counts = np.array([
-    [true_positive,  false_positive],   # Row 0 = Predicted Track
-    [false_negative, true_negative]     # Row 1 = Predicted Cascade
+    [true_negative,  false_negative],   # Row 0 = Predicted Cascade
+    [false_positive, true_positive]     # Row 1 = Predicted Track
 ])
 
-# Column totals (how many TRUE Tracks vs TRUE Cascades exist)
-total_true_track   = true_positive + false_negative
-total_true_cascade = false_positive + true_negative
+# Column totals (how many TRUE Cascades vs TRUE Tracks exist)
+total_true_cascade = true_negative + false_positive
+total_true_track   = false_negative + true_positive
 
 column_totals = np.array([
-    [total_true_track,   total_true_cascade],
-    [total_true_track,   total_true_cascade]
+    [total_true_cascade, total_true_track],
+    [total_true_cascade, total_true_track]
 ])
 
 # Percentages normalized by TRUE LABEL (column normalization)
-percentages = counts / column_totals
+percentages = counts / column_totals * 100
 
 # ============================================================
 # STEP 5: DRAW THE CONFUSION MATRIX MANUALLY
@@ -170,29 +173,28 @@ percentages = counts / column_totals
 # using scikit's ConfusionMatrixDisplay.
 #
 # The matrix is drawn on a coordinate grid where:
-#   x goes from 0 to 2 (left to right: True Track | True Cascade)
-#   y goes from 0 to 2 (bottom to top: Pred. Cascade | Pred. Track)
+#   x goes from 0 to 2 (left to right: True Cascade | True Track)
+#   y goes from 0 to 2 (bottom to top: Pred. Track | Pred. Cascade)
 #
 # Each cell is a 1x1 square. We colour it based on its percentage,
-# then write three lines of text inside it:
-#   Line 1: the percentage (large, bold)
+# then write two lines of text inside it:
+#   Line 1: the percentage (large)
 #   Line 2: the fraction  count / column_total
-#   Line 3: the raw count
 
 # Create the figure and axes (the blank canvas)
-fig, ax = plt.subplots(figsize=(7, 6))
+fig, ax = plt.subplots(figsize=(8.5, 7.5))
 
 # Choose the "Blues" colourmap. A colourmap maps a number between
 # 0.0 and 1.0 to a colour. 0.0 = lightest blue, 1.0 = darkest blue.
 colormap = plt.get_cmap("Blues")
 
-# We also need a "normaliser" — this tells matplotlib what range
+# We also need a "normaliser", this tells matplotlib what range
 # of values maps to the full colourmap (0% to 100% here).
-normaliser = mcolors.Normalize(vmin=0.0, vmax=1.0)
+normaliser = mcolors.Normalize(vmin=0, vmax=100)
 
 # Loop through every cell in the 2x2 grid.
-# "row" goes 0 or 1 (0 = Predicted Track row, 1 = Predicted Cascade row)
-# "col" goes 0 or 1 (0 = True Track column, 1 = True Cascade column)
+# "row" goes 0 or 1 (0 = Predicted Cascade row, 1 = Predicted Track row)
+# "col" goes 0 or 1 (0 = True Cascade column, 1 = True Track column)
 for row in range(2):
     for col in range(2):
         # Get the values for this specific cell
@@ -204,7 +206,7 @@ for row in range(2):
         cell_colour = colormap(normaliser(percentage))
 
         # Rectangle bottom-left corner: (col, 1 - row)
-        # This places Predicted Track on top (row=0 -> y=1) and Pred. Cascade below.
+        # This places Predicted Cascade on top (row=0 -> y=1) and Pred. Track below.
         ax.add_patch(plt.Rectangle(
             (col, 1 - row),   # bottom-left corner (x, y)
             1, 1,             # width and height
@@ -214,33 +216,29 @@ for row in range(2):
         # --- Choose text colour ---
         # Dark text on light backgrounds, white text on dark backgrounds.
         # Percentages above 60% produce dark enough colours to need white text.
-        if percentage > 0.60:
+        if percentage > 60:
             text_colour = "white"
         else:
             text_colour = "black"
 
-        percentage_text = f"{percentage:.1%}"
-
-        # --- Line 1: percentage (large, bold) ---
+        # --- Line 1: percentage ---
         ax.text(
             col + 0.5,          # x position: centre of this column
-            1 - row + 0.65,     # y position: upper area of this row
-            percentage_text,
+            1 - row + 0.56,     # y position: upper area of this row
+            f"{percentage:.1f}%",
             ha="center", va="center",
-            fontsize=26, fontweight="bold",
+            fontsize=28,
             color=text_colour
         )
 
         # --- Line 2: fraction count / column_total ---
-        # The fraction shows:  count / column_total
-        # e.g. "18 / 25" meaning 18 out of 25 TRUE Track videos landed here
-        fraction_text = f"{count} / {column_totals[row, col]}"
+        # e.g. "18/25" meaning 18 out of 25 TRUE Cascade videos landed here
         ax.text(
             col + 0.5,
-            1 - row + 0.42,
-            fraction_text,
+            1 - row + 0.40,
+            f"{count}/{column_totals[row, col]}",
             ha="center", va="center",
-            fontsize=11,
+            fontsize=22,
             color=text_colour
         )
 
@@ -249,46 +247,31 @@ for row in range(2):
 # ============================================================
 # The colour bar is a legend on the side showing what colour
 # corresponds to what percentage.
-#
-# To add it, we create a "ScalarMappable" — this is just an
-# object that links the colourmap and normaliser together so
-# matplotlib knows how to draw the bar.
 scalar_mappable = cm.ScalarMappable(cmap=colormap, norm=normaliser)
-
-# Add the colour bar to the figure, attached to our axes (ax)
 colorbar = plt.colorbar(scalar_mappable, ax=ax)
-
-# Label the colour bar and format its tick marks as percentages
-colorbar.set_label("Percentage of true-label videos in each column", fontsize=10)
-colorbar.set_ticks([0.0, 0.25, 0.50, 0.75, 1.0])
-colorbar.set_ticklabels(["0%", "25%", "50%", "75%", "100%"])
+colorbar.set_label("Percentage", fontsize=20)
+colorbar.ax.tick_params(labelsize=16)
 
 # ============================================================
 # STEP 7: LABELS, TITLE, AND FORMATTING
 # ============================================================
 # Set the x-axis tick positions and labels (the TRUE classes)
 ax.set_xticks([0.5, 1.5])
-ax.set_xticklabels(["True Track", "True Cascade"], fontsize=11)
+ax.set_xticklabels(["Cascade", "Track"], fontsize=22)
 
-# Set the y-axis tick positions and labels (the PREDICTED classes)
+# Set the y-axis tick positions and labels (the PREDICTED classes, bottom to top)
 ax.set_yticks([0.5, 1.5])
-ax.set_yticklabels(["Pred. Cascade", "Pred. Track"], fontsize=11)
-
-# Move the x-axis labels to the top (common for confusion matrices)
-ax.xaxis.set_label_position("top")
-ax.xaxis.tick_top()
+ax.set_yticklabels(["Track", "Cascade"], fontsize=22, rotation=90, va="center")
 
 # Axis titles
-ax.set_xlabel("True Label  (Monte Carlo Interaction Type)", fontsize=11, labelpad=12)
-ax.set_ylabel("Majority-Vote Prediction", fontsize=11, labelpad=12)
+ax.set_xlabel("MC Truth Label", fontsize=24)
+if PREDICTION == "pid":
+    ax.set_ylabel("PID", fontsize=24)
+else:
+    ax.set_ylabel("User Agreement", fontsize=24)
 
 # Overall title
-plt.title(
-    f"{titleName}\n"
-    f"n={total} videos   Accuracy={accuracy:.1%}",
-    fontsize=12,
-    pad=30
-)
+ax.set_title(titleName, fontsize=18, pad=12)
 
 # Set the plot boundaries so our rectangles fill the space neatly
 ax.set_xlim(0, 2)
@@ -304,6 +287,7 @@ ax.tick_params(length=0)
 plt.tight_layout()
 
 # Save and display
-plt.savefig("neutrino_confusion_matrix_v3.png", dpi=150, bbox_inches="tight")
+plot_name = f"confusion_matrix_4_0_{PREDICTION}.png"
+plt.savefig(plot_name, dpi=150, bbox_inches="tight")
 plt.show()
-print("\nDone! Plot saved as neutrino_confusion_matrix_v3.png")
+print(f"\nDone! Plot saved as {plot_name}")
