@@ -43,7 +43,7 @@ Python scripts used for NtN 3.0 and 4.0 analysis
     - Step 1.) Request a classification export off of zooniverse. Find all of the votes you want to analyze and copy it over to a new csv file. This csv file should have thousands upon thousands of individual user votes.
     - At this point, you can use time_distrubution.py
     - Step 2.) (Optional but highly reccomended) If you want to implement a time cut, now is the time to do so with cuts/timecut.py
-    - Step 3.) (Optional but highly reccomended) If you want to implement an accuracy cut, now is the time to do so with cuts/accuracy_cut.py
+    - Step 3.) (Optional) If you want to implement an accuracy cut, now is the time to do so with cuts/accuracy_cut.py
     - Step 4.) Now, reduce the file using reducer.py
     - Step 5.) (Optional but highly reccomended) If you want to implement an agreement cut, now is the time to do so with cuts/agreement_cut.py
     - At this point, you can use confusion_matrix.py and pid_accuracy_vs_user_accuracy.py
