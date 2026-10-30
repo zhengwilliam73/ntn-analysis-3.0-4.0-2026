@@ -1,6 +1,7 @@
-# 5/24/2026, Spring Quarter 2025-2026
+# 10/30/2026
 # Used to effectively ignore any classifications under 6 seconds
-# Last used 7/6/26
+#
+# 4.0 version. Same cut, only the file names changed
 
 import csv
 import json
@@ -8,8 +9,8 @@ from datetime import datetime
 
 # ---- SETTINGS ---- #
 MIN_SECONDS = 6
-INPUT_FILE = "name-that-neutrino-classifications-you-decide.csv"       # <-- Change this to your input CSV filename
-OUTPUT_FILE = f"name-that-neutrino-classifications-you-decide-timecut-{MIN_SECONDS}-seconds.csv"  # <-- This is the name of the output CSV file
+INPUT_FILE = "4-0-level-4-classifications.csv"       # <-- Change this to your input CSV filename (the Zooniverse export)
+OUTPUT_FILE = f"4-0-level-4-classifications-timecut-{MIN_SECONDS}-seconds.csv"  # <-- This is the name of the output CSV file
 # ------------------ #
 
 # We'll use this to count how many rows were removed
@@ -29,7 +30,7 @@ writer.writeheader()
 # Go through every row in the input file, one at a time
 for row in reader:
 
-    # The metadata column contains a JSON string — parse it into a dictionary
+    # The metadata column contains a JSON string, parse it into a dictionary
     metadata = json.loads(row["metadata"])
 
     # Pull out the start and end times from the metadata
@@ -45,10 +46,10 @@ for row in reader:
 
     # Check the duration
     if duration_seconds >= MIN_SECONDS:
-        # Duration is long enough — keep this row by writing it to the output file
+        # Duration is long enough, keep this row by writing it to the output file
         writer.writerow(row)
     else:
-        # Duration is too short — skip this row and count it as removed
+        # Duration is too short, skip this row and count it as removed
         rows_removed += 1
 
 # Close both files when done
