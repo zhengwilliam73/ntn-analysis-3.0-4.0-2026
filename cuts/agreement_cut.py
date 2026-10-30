@@ -1,15 +1,20 @@
-# 7/6/2026
+# 10/30/2026
+
+# 4.0 version. Same cut, the following detail the differences:
+# 1.) File names point to the 4.0 reduced file
+# 2.) "Video" printouts also show the subject ID, since two 4.0 subjects share a filename (event 4083)
 
 import pandas as pd
 import matplotlib.pyplot as plt
 import numpy as np
 
 # Load the CSV file
-df = pd.read_csv("name-that-neutrino-classifications-you-decide-timecut-6-seconds-reduced.csv")
+df = pd.read_csv("4-0-level-4-classifications-timecut-6-seconds-reduced.csv")
+new_filename = "4-0-level-4-classifications-timecut-6-seconds-reduced-agreementcut-30~70.csv"
 
 # --- Agreement Cut Parameters ---
-cut_low  = 0.4
-cut_high = 0.6
+cut_low  = 0.3
+cut_high = 0.7
 
 # --- Sort videos into two lists ---
 kept_videos   = []
@@ -32,7 +37,7 @@ if len(removed_videos) == 0:
     print("No videos were removed.")
 else:
     for row in removed_videos:
-        print(f"  Video: {row['video']}")
+        print(f"  Video: {row['video']} (subject {row['subject_id']})")
         print(f"  Track Ratio: {row['track_ratio']}")
         print("-" * 30)
 
@@ -45,7 +50,7 @@ if len(kept_videos) == 0:
     print("No videos were kept.")
 else:
     for row in kept_videos:
-        print(f"  Video: {row['video']}")
+        print(f"  Video: {row['video']} (subject {row['subject_id']})")
         print(f"  Track Ratio: {row['track_ratio']}")
         print("-" * 30)
 
@@ -60,7 +65,6 @@ print(f"  Videos kept:    {len(kept_videos)}")
 
 # --- Save kept videos to a new CSV ---
 filtered_df = pd.DataFrame(kept_videos)
-new_filename = "name-that-neutrino-classifications-you-decide-timecut-6-seconds-reduced-agreementcut-50~60.csv"
 filtered_df.to_csv(new_filename, index=False)
 print(f"\n  Filtered data saved to {new_filename}")
 
@@ -90,12 +94,12 @@ ax1.set_title('Before Agreement Cut', fontsize=14)
 ax1.set_xlabel('Track Ratio', fontsize=12)
 ax1.set_ylabel('Number of Videos', fontsize=12)
 ax1.set_xticks(np.arange(0, 1.05, 0.10))
-ax1.set_xticklabels([f'{int(x*100)}%' for x in np.arange(0, 1.05, 0.10)])
+ax1.set_xticklabels([f'{int(round(x*100))}%' for x in np.arange(0, 1.05, 0.10)])
 ax1.yaxis.set_major_locator(plt.MaxNLocator(integer=True))
 ax1.grid(axis='y', linestyle='--', alpha=0.6)
 
 # Shade the cut region on the left plot so it's visible
-ax1.axvspan(cut_low, cut_high, color='red', alpha=0.15, label=f'Cut region ({cut_low}–{cut_high})')
+ax1.axvspan(cut_low, cut_high, color='red', alpha=0.15, label=f'Cut region ({cut_low}-{cut_high})')
 ax1.legend()
 
 # --- Right plot: After the cut ---
@@ -104,7 +108,7 @@ ax2.set_title('After Agreement Cut', fontsize=14)
 ax2.set_xlabel('Track Ratio', fontsize=12)
 ax2.set_ylabel('Number of Videos', fontsize=12)
 ax2.set_xticks(np.arange(0, 1.05, 0.10))
-ax2.set_xticklabels([f'{int(x*100)}%' for x in np.arange(0, 1.05, 0.10)])
+ax2.set_xticklabels([f'{int(round(x*100))}%' for x in np.arange(0, 1.05, 0.10)])
 ax2.yaxis.set_major_locator(plt.MaxNLocator(integer=True))
 ax2.grid(axis='y', linestyle='--', alpha=0.6)
 
